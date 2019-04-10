@@ -265,11 +265,17 @@ public:
     int radiusSearchGpu(const Matrix<ElementType>& queries, std::vector< std::vector<int> >& indices,
                         std::vector<std::vector<DistanceType> >& dists, float radius, const SearchParams& params) const;
 
+
+    ThreadData* createThreadData() const
+    {
+    	return NULL;
+    }
+
     /**
      * Not implemented, since it is only used by single-element searches.
      * (but is needed b/c it is abstract in the base class)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams, ThreadData *threadData) const
     {
     }
 

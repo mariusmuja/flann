@@ -53,12 +53,12 @@ class Heap
      * Type T must be comparable.
      */
     std::vector<T> heap;
-    int length;
+    size_t length;
 
     /**
      * Number of element in the heap
      */
-    int count;
+    size_t count;
 
 
 
@@ -70,7 +70,7 @@ public:
      *     size = heap size
      */
 
-    Heap(int size)
+    Heap(size_t size)
     {
         length = size;
         heap.reserve(length);
@@ -81,9 +81,18 @@ public:
      *
      * Returns: heap size
      */
-    int size()
+    size_t size()
     {
         return count;
+    }
+
+    /**
+     *
+     * Returns: reserved length
+     */
+    size_t reservedLength()
+    {
+        return length;
     }
 
     /**
@@ -451,7 +460,6 @@ public:
     	return interval_heap_.popMin(value);
     }
 };
-
 
 
 }

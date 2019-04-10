@@ -208,6 +208,11 @@ public:
         return pool_.usedMemory+pool_.wastedMemory+size_*sizeof(int);  // pool memory and vind array memory
     }
 
+    ThreadData* createThreadData() const
+    {
+    	return NULL;
+    }
+
     /**
      * Find set of nearest neighbors to vec. Their indices are stored inside
      * the result object.
@@ -217,7 +222,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     maxCheck = the maximum number of restarts (in a best-bin-first manner)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams, ThreadData *threadData) const
     {
         float epsError = 1+searchParams.eps;
 

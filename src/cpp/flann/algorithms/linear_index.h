@@ -126,7 +126,12 @@ public:
     	la & *this;
     }
 
-    void findNeighbors(ResultSet<DistanceType>& resultSet, const ElementType* vec, const SearchParams& /*searchParams*/) const
+    ThreadData* createThreadData() const
+    {
+    	return NULL;
+    }
+
+    void findNeighbors(ResultSet<DistanceType>& resultSet, const ElementType* vec, const SearchParams& /*searchParams*/, ThreadData *threadData) const
     {
     	if (removed_) {
     		for (size_t i = 0; i < points_.size(); ++i) {

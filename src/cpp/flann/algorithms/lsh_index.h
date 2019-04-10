@@ -238,30 +238,34 @@ public:
 #pragma omp parallel num_threads(params.cores)
         	{
         		KNNUniqueResultSet<DistanceType> resultSet(knn);
+        		ThreadData *threadData = createThreadData();
 #pragma omp for schedule(static) reduction(+:count)
         		for (int i = 0; i < (int)queries.rows; i++) {
         			resultSet.clear();
-        			findNeighbors(resultSet, queries[i], params);
+        			findNeighbors(resultSet, queries[i], params, threadData);
         			size_t n = std::min(resultSet.size(), knn);
         			resultSet.copy(indices[i], dists[i], n, params.sorted);
         			indices_to_ids(indices[i], indices[i], n);
         			count += n;
         		}
+        		delete threadData;
         	}
         }
         else {
 #pragma omp parallel num_threads(params.cores)
         	{
         		KNNResultSet<DistanceType> resultSet(knn);
+        		ThreadData *threadData = createThreadData();
 #pragma omp for schedule(static) reduction(+:count)
         		for (int i = 0; i < (int)queries.rows; i++) {
         			resultSet.clear();
-        			findNeighbors(resultSet, queries[i], params);
+        			findNeighbors(resultSet, queries[i], params, threadData);
         			size_t n = std::min(resultSet.size(), knn);
         			resultSet.copy(indices[i], dists[i], n, params.sorted);
         			indices_to_ids(indices[i], indices[i], n);
         			count += n;
         		}
+        		delete threadData;
         	}
         }
 
@@ -291,10 +295,11 @@ public:
 #pragma omp parallel num_threads(params.cores)
 			{
 				KNNUniqueResultSet<DistanceType> resultSet(knn);
+        		ThreadData *threadData = createThreadData();
 #pragma omp for schedule(static) reduction(+:count)
 				for (int i = 0; i < (int)queries.rows; i++) {
 					resultSet.clear();
-					findNeighbors(resultSet, queries[i], params);
+					findNeighbors(resultSet, queries[i], params, threadData);
 					size_t n = std::min(resultSet.size(), knn);
 					indices[i].resize(n);
 					dists[i].resize(n);
@@ -304,16 +309,18 @@ public:
 					}
 					count += n;
 				}
+        		delete threadData;
 			}
 		}
 		else {
 #pragma omp parallel num_threads(params.cores)
 			{
 				KNNResultSet<DistanceType> resultSet(knn);
+        		ThreadData *threadData = createThreadData();
 #pragma omp for schedule(static) reduction(+:count)
 				for (int i = 0; i < (int)queries.rows; i++) {
 					resultSet.clear();
-					findNeighbors(resultSet, queries[i], params);
+					findNeighbors(resultSet, queries[i], params, threadData);
 					size_t n = std::min(resultSet.size(), knn);
 					indices[i].resize(n);
 					dists[i].resize(n);
@@ -323,11 +330,18 @@ public:
 					}
 					count += n;
 				}
+        		delete threadData;
 			}
 		}
 
 		return count;
     }
+
+    ThreadData* createThreadData() const
+    {
+    	return NULL;
+    }
+
 
     /**
      * Find set of nearest neighbors to vec. Their indices are stored inside
@@ -338,7 +352,7 @@ public:
      *     vec = the vector for which to search the nearest neighbors
      *     maxCheck = the maximum number of restarts (in a best-bin-first manner)
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& /*searchParams*/) const
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& /*searchParams*/, ThreadData *threadData) const
     {
         getNeighbors(vec, result);
     }

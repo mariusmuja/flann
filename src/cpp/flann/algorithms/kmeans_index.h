@@ -270,6 +270,11 @@ public:
     	la & *this;
     }
 
+    ThreadData* createThreadData() const
+    {
+    	return NULL;
+    }
+
     /**
      * Find set of nearest neighbors to vec. Their indices are stored inside
      * the result object.
@@ -280,7 +285,7 @@ public:
      *     searchParams = parameters that influence the search algorithm (checks, cb_index)
      */
 
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams, ThreadData *threadData) const
     {
     	if (removed_) {
     		findNeighborsWithRemoved<true>(result, vec, searchParams);

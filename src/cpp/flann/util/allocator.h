@@ -131,48 +131,57 @@ public:
      */
     void* allocateMemory(int size)
     {
-        int blocksize;
+    	void* rloc = NULL;
+    	bool errorExists = false;
 
-        /* Round size up to a multiple of wordsize.  The following expression
-            only works for WORDSIZE that is a power of 2, by masking last bits of
-            incremented size to zero.
-         */
-        size = (size + (WORDSIZE - 1)) & ~(WORDSIZE - 1);
+		#pragma omp critical
+		{
+			int blocksize;
 
-        /* Check whether a new block must be allocated.  Note that the first word
-            of a block is reserved for a pointer to the previous block.
-         */
-        if (size > remaining) {
+			/* Round size up to a multiple of wordsize.  The following expression
+				only works for WORDSIZE that is a power of 2, by masking last bits of
+				incremented size to zero.
+			 */
+			size = (size + (WORDSIZE - 1)) & ~(WORDSIZE - 1);
 
-            wastedMemory += remaining;
+			/* Check whether a new block must be allocated.  Note that the first word
+				of a block is reserved for a pointer to the previous block.
+			 */
+			if (size > remaining) {
 
-            /* Allocate new storage. */
-            blocksize = (size + sizeof(void*) + (WORDSIZE-1) > BLOCKSIZE) ?
-                        size + sizeof(void*) + (WORDSIZE-1) : BLOCKSIZE;
+				wastedMemory += remaining;
 
-            // use the standard C malloc to allocate memory
-            void* m = ::malloc(blocksize);
-            if (!m) {
-                fprintf(stderr,"Failed to allocate memory.\n");
-                return NULL;
-            }
+				/* Allocate new storage. */
+				blocksize = (size + sizeof(void*) + (WORDSIZE-1) > BLOCKSIZE) ?
+							size + sizeof(void*) + (WORDSIZE-1) : BLOCKSIZE;
 
-            /* Fill first word of new block with pointer to previous block. */
-            ((void**) m)[0] = base;
-            base = m;
+				// use the standard C malloc to allocate memory
+				void* m = ::malloc(blocksize);
+				if (!m) {
+					fprintf(stderr,"Failed to allocate memory.\n");
+					errorExists = true;
+				} else {
+					/* Fill first word of new block with pointer to previous block. */
+					((void**) m)[0] = base;
+					base = m;
 
-            int shift = 0;
-            //int shift = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) & (WORDSIZE-1))) & (WORDSIZE-1);
+					int shift = 0;
+					//int shift = (WORDSIZE - ( (((size_t)m) + sizeof(void*)) & (WORDSIZE-1))) & (WORDSIZE-1);
 
-            remaining = blocksize - sizeof(void*) - shift;
-            loc = ((char*)m + sizeof(void*) + shift);
-        }
-        void* rloc = loc;
-        loc = (char*)loc + size;
-        remaining -= size;
+					remaining = blocksize - sizeof(void*) - shift;
+					loc = ((char*)m + sizeof(void*) + shift);
+				}
+			}
 
-        usedMemory += size;
+			if (!errorExists) {
+				rloc = loc;
+				loc = (char*)loc + size;
+				remaining -= size;
 
+				usedMemory += size;
+			}
+
+		}
         return rloc;
     }
 

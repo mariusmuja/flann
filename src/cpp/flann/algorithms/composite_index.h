@@ -199,13 +199,18 @@ public:
         kdtree_index_->loadIndex(stream);
     }
 
+    ThreadData* createThreadData() const
+    {
+    	return NULL;
+    }
+
     /**
      * \brief Method that searches for nearest-neighbours
      */
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams, ThreadData *threadData) const
     {
-        kmeans_index_->findNeighbors(result, vec, searchParams);
-        kdtree_index_->findNeighbors(result, vec, searchParams);
+        kmeans_index_->findNeighbors(result, vec, searchParams, threadData);
+        kdtree_index_->findNeighbors(result, vec, searchParams, threadData);
     }
 
 protected:

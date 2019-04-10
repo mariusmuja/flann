@@ -37,6 +37,7 @@
 #include <cassert>
 #include <limits>
 #include <cmath>
+#include <omp.h>
 
 #ifndef SIZE_MAX
 #define SIZE_MAX ((size_t) -1)
@@ -47,7 +48,7 @@
 #include "flann/algorithms/dist.h"
 #include "flann/util/matrix.h"
 #include "flann/util/result_set.h"
-#include "flann/util/heap.h"
+#include "flann/util/free_size_heap.h"
 #include "flann/util/allocator.h"
 #include "flann/util/random.h"
 #include "flann/util/saving.h"
@@ -60,7 +61,8 @@ struct HierarchicalClusteringIndexParams : public IndexParams
 {
     HierarchicalClusteringIndexParams(int branching = 32,
                                       flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
-                                      int trees = 4, int leaf_max_size = 100)
+                                      int trees = 4, int leaf_max_size = 100,
+                                      int build_cores = 0)
     {
         (*this)["algorithm"] = FLANN_INDEX_HIERARCHICAL;
         // The branching factor used in the hierarchical clustering
@@ -71,6 +73,8 @@ struct HierarchicalClusteringIndexParams : public IndexParams
         (*this)["trees"] = trees;
         // maximum leaf size
         (*this)["leaf_max_size"] = leaf_max_size;
+        // how many cores to assign to the build (used only if compiled with OpenMP capable compiler) (0 for auto)
+        (*this)["build_cores"] = build_cores;
     }
 };
 
@@ -106,6 +110,9 @@ public:
         centers_init_ = get_param(index_params_,"centers_init", FLANN_CENTERS_RANDOM);
         trees_ = get_param(index_params_,"trees",4);
         leaf_max_size_ = get_param(index_params_,"leaf_max_size",100);
+#ifdef _OPENMP
+        build_cores_ = get_param(index_params_,"build_cores", omp_get_num_procs());
+#endif
 
         initCenterChooser();
     }
@@ -128,6 +135,9 @@ public:
         centers_init_ = get_param(index_params_,"centers_init", FLANN_CENTERS_RANDOM);
         trees_ = get_param(index_params_,"trees",4);
         leaf_max_size_ = get_param(index_params_,"leaf_max_size",100);
+#ifdef _OPENMP
+        build_cores_ = get_param(index_params_,"build_cores", omp_get_num_procs());
+#endif
 
         initCenterChooser();
         
@@ -142,7 +152,8 @@ public:
     		branching_(other.branching_),
     		trees_(other.trees_),
     		centers_init_(other.centers_init_),
-    		leaf_max_size_(other.leaf_max_size_)
+    		leaf_max_size_(other.leaf_max_size_),
+    		build_cores_(other.build_cores_)
 
     {
     	initCenterChooser();
@@ -277,6 +288,11 @@ public:
     }
 
 
+    ThreadData *createThreadData() const {
+    	return new ThreadData_(size_);
+    }
+
+
     /**
      * Find set of nearest neighbors to vec. Their indices are stored inside
      * the result object.
@@ -287,13 +303,13 @@ public:
      *     searchParams = parameters that influence the search algorithm (checks)
      */
 
-    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
+    void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams, ThreadData *threadData) const
     {
     	if (removed_) {
-    		findNeighborsWithRemoved<true>(result, vec, searchParams);
+    		findNeighborsWithRemoved<true>(result, vec, searchParams, (ThreadData_*)threadData);
     	}
     	else {
-    		findNeighborsWithRemoved<false>(result, vec, searchParams);
+    		findNeighborsWithRemoved<false>(result, vec, searchParams, (ThreadData_*)threadData);
     	}
     }
 
@@ -310,8 +326,11 @@ protected:
             throw FLANNException("Branching factor must be at least 2");
         }
         tree_roots_.resize(trees_);
-        std::vector<int> indices(size_);
+        std::vector<int> indices;
+
+        #pragma omp parallel for num_threads(build_cores_) private(indices)
         for (int i=0; i<trees_; ++i) {
+        	indices.resize(size_);
             for (size_t j=0; j<size_; ++j) {
                 indices[j] = j;
             }
@@ -541,28 +560,48 @@ private:
         }
     }
 
+    class ThreadData_ : public ThreadData {
+    public:
+    	FreeSizeHeap<BranchSt> *heap;
+    	SparseBitset *checked;
+
+    	ThreadData_(size_t size)
+    	{
+    		heap = HeapPool<BranchSt>::getHeapPool().getHeap();
+    		checked = BitsetPool::getBitsetPool().getBitset(size);
+    	}
+
+    	virtual ~ThreadData_()
+    	{
+    		HeapPool<BranchSt>::getHeapPool().putBackHeap(heap);
+    		BitsetPool::getBitsetPool().putBackBitset(checked);
+    	}
+    };
 
     template<bool with_removed>
-    void findNeighborsWithRemoved(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const
+    void findNeighborsWithRemoved(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams, ThreadData_ *threadData) const
     {
         int maxChecks = searchParams.checks;
 
         // Priority queue storing intermediate branches in the best-bin-first search
-        Heap<BranchSt>* heap = new Heap<BranchSt>(size_);
+        FreeSizeHeap<BranchSt>* heap = threadData->heap;
+        SparseBitset* checked = threadData->checked;
 
-        DynamicBitset checked(size_);
         int checks = 0;
         for (int i=0; i<trees_; ++i) {
-            findNN<with_removed>(tree_roots_[i], result, vec, checks, maxChecks, heap, checked);
+        	if (checks<maxChecks || !result.full()) {
+        		findNN<with_removed>(tree_roots_[i], result, vec, checks, maxChecks, heap, *checked);
+        	}
         }
 
         BranchSt branch;
         while (heap->popMin(branch) && (checks<maxChecks || !result.full())) {
             NodePtr node = branch.node;
-            findNN<with_removed>(node, result, vec, checks, maxChecks, heap, checked);
+            findNN<with_removed>(node, result, vec, checks, maxChecks, heap, *checked);
         }
 
-        delete heap;
+        checked->clear();
+		heap->clear();
     }
 
 
@@ -580,13 +619,9 @@ private:
 
     template<bool with_removed>
     void findNN(NodePtr node, ResultSet<DistanceType>& result, const ElementType* vec, int& checks, int maxChecks,
-                Heap<BranchSt>* heap,  DynamicBitset& checked) const
+    		FreeSizeHeap<BranchSt>* heap,  SparseBitset& checked) const
     {
         if (node->childs.empty()) {
-            if (checks>=maxChecks) {
-                if (result.full()) return;
-            }
-
             for (size_t i=0; i<node->points.size(); ++i) {
             	PointInfo& pointInfo = node->points[i];
             	if (with_removed) {
@@ -715,6 +750,11 @@ private:
      * Algorithm used to choose initial centers
      */
     CenterChooser<Distance>* chooseCenters_;
+
+    /**
+     * how many cores to assign to the build (used only if compiled with OpenMP capable compiler) (0 for auto)
+     */
+    int build_cores_;
 
     USING_BASECLASS_SYMBOLS
 };
