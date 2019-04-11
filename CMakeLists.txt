@@ -66,6 +66,10 @@ if (NOT BUILD_C_BINDINGS)
     set(BUILD_MATLAB_BINDINGS OFF)
 endif()
 
+if (APPLE)
+    set(CMAKE_MACOSX_RPATH ON)
+    set(OPENMP_FOUND ON)
+endif (APPLE)
 
 # find python
 if (BUILD_PYTHON_BINDINGS)
