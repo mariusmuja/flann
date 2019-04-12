@@ -2,6 +2,8 @@
 
 add_definitions(-D_FLANN_VERSION=${FLANN_VERSION})
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flann/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/flann/config.h)
 
 file(GLOB_RECURSE C_SOURCES flann.cpp)
