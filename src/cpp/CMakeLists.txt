@@ -107,6 +107,17 @@ if (BUILD_C_BINDINGS)
     )
 endif()
 
+if (BUILD_OpenCL_LIB)
+    set_property(TARGET flann_cpp PROPERTY COMPILE_DEFINITIONS FLANN_USE_OPENCL)
+    set_property(TARGET flann_cpp_s PROPERTY COMPILE_DEFINITIONS FLANN_USE_OPENCL)
+    set_property(TARGET flann PROPERTY COMPILE_DEFINITIONS FLANN_USE_OPENCL)
+    set_property(TARGET flann_s PROPERTY COMPILE_DEFINITIONS FLANN_USE_OPENCL)
+    target_link_libraries(flann_cpp ${OpenCL_LIBRARIES})
+    target_link_libraries(flann_cpp_s ${OpenCL_LIBRARIES})
+    target_link_libraries(flann ${OpenCL_LIBRARIES})
+    target_link_libraries(flann_s ${OpenCL_LIBRARIES})
+endif()
+
 if(WIN32)
 if (BUILD_C_BINDINGS AND BUILD_MATLAB_BINDINGS)
     install (

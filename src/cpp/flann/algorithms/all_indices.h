@@ -44,6 +44,10 @@
 #ifdef FLANN_USE_CUDA
 #include "flann/algorithms/kdtree_cuda_3d_index.h"
 #endif
+#ifdef FLANN_USE_OPENCL
+#include "flann/algorithms/kmeans_opencl_index.h"
+#include "flann/algorithms/hierarchical_opencl_index.h"
+#endif
 
 
 namespace flann
@@ -165,6 +169,15 @@ inline NNIndex<Distance>*
 	case FLANN_INDEX_KDTREE_CUDA:
 		nnIndex = create_index_<KDTreeCuda3dIndex,Distance,ElementType>(dataset, params, distance);
 		break;
+#endif
+
+#ifdef FLANN_USE_OPENCL
+    case FLANN_INDEX_KMEANS_OPENCL:
+        nnIndex = create_index_<KMeansOpenCLIndex,Distance,ElementType>(dataset, params, distance);
+        break;
+    case FLANN_INDEX_HIERARCHICAL_OPENCL:
+        nnIndex = create_index_<HierarchicalClusteringOpenCLIndex,Distance,ElementType>(dataset, params, distance);
+        break;
 #endif
 
 	case FLANN_INDEX_KMEANS:

@@ -367,6 +367,34 @@ public:
     	return nnIndex_->radiusSearch(queries, indices, dists, radius, params);
     }
 
+    /**
+     *
+     */
+#ifdef FLANN_USE_OPENCL
+    void buildCLKnnSearch(size_t knn,
+                          const SearchParams& params,
+                          cl_command_queue cq = NULL)
+    {
+        IndexType* nnIndexTmp = nnIndex_;
+        switch(nnIndex_->getType()){
+            case FLANN_INDEX_HIERARCHICAL:
+                nnIndex_ = new HierarchicalClusteringOpenCLIndex<Distance>(*(HierarchicalClusteringIndex<Distance>*)nnIndex_);
+                
+                // Delete the non-OpenCL version
+                delete nnIndexTmp;
+            case FLANN_INDEX_HIERARCHICAL_OPENCL:
+                return nnIndex_->buildCLKnnSearch(knn, params, cq);
+            case FLANN_INDEX_KMEANS:
+                nnIndex_ = new KMeansOpenCLIndex<Distance>(*(KMeansIndex<Distance>*)nnIndex_);
+                
+                // Delete the non-OpenCL version
+                delete nnIndexTmp;
+            case FLANN_INDEX_KMEANS_OPENCL:
+                return nnIndex_->buildCLKnnSearch(knn, params, cq);
+        }
+    }
+#endif /* FLANN_USE_OPENCL */
+
 private:
     IndexType* load_saved_index(const Matrix<ElementType>& dataset, const std::string& filename, Distance distance)
     {

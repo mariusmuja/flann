@@ -88,6 +88,10 @@ enum flann_algorithm_t
 #ifdef FLANN_USE_CUDA
     FLANN_INDEX_KDTREE_CUDA 	= 7,
 #endif
+#ifdef FLANN_USE_OPENCL
+    FLANN_INDEX_KMEANS_OPENCL     = 10,
+    FLANN_INDEX_HIERARCHICAL_OPENCL = 11,
+#endif
     FLANN_INDEX_SAVED 			= 254,
     FLANN_INDEX_AUTOTUNED 		= 255,
 };

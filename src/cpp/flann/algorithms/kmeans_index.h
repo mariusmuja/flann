@@ -218,7 +218,7 @@ public:
         size_t old_size = size_;
 
         extendDataset(points);
-        
+
         if (rebuild_threshold>1 && size_at_build_*rebuild_threshold<size_) {
             buildIndex();
         }
@@ -226,7 +226,7 @@ public:
             for (size_t i=0;i<points.rows;++i) {
                 DistanceType dist = distance_(root_->pivot, points[i], veclen_);
                 addPointToTree(root_, old_size + i, dist);
-            }            
+            }
         }
     }
 
@@ -288,7 +288,6 @@ public:
     	else {
     		findNeighborsWithRemoved<false>(result, vec, searchParams);
     	}
-
     }
 
     /**
@@ -344,13 +343,13 @@ protected:
         computeClustering(root_, &indices[0], (int)size_, branching_);
     }
 
-private:
+protected:
 
     struct PointInfo
     {
     	size_t index;
     	ElementType* point;
-    private:
+    protected:
     	template<typename Archive>
     	void serialize(Archive& ar)
     	{
@@ -475,7 +474,10 @@ private:
     	dst->size = src->size;
 
     	if (src->childs.size()==0) {
-    		dst->points = src->points;
+            dst->points = src->points;
+            for (size_t i=0;i<src->points.size();++i) {
+                dst->points[i].point = points_[dst->points[i].index];
+            }
     	}
     	else {
     		dst->childs.resize(src->childs.size());
@@ -511,7 +513,7 @@ private:
         for (size_t j=0; j<veclen_; ++j) {
             mean[j] *= div_factor;
         }
-        
+
         DistanceType radius = 0;
         DistanceType variance = 0;
         for (size_t i=0; i<size; ++i) {
@@ -520,7 +522,7 @@ private:
                 radius = dist;
             }
             variance += dist;
-        }        
+        }
         variance /= size;
 
         node->variance = variance;
@@ -967,7 +969,7 @@ private:
         varianceValue = meanVariance/root->size;
         return clusterCount;
     }
-    
+
     void addPointToTree(NodePtr node, size_t index, DistanceType dist_to_pivot)
     {
         ElementType* point = points_[index];
@@ -977,7 +979,7 @@ private:
         // if radius changed above, the variance will be an approximation
         node->variance = (node->size*node->variance+dist_to_pivot)/(node->size+1);
         node->size++;
-        
+
         if (node->childs.empty()) { // leaf node
         	PointInfo point_info;
         	point_info.index = index;
@@ -993,7 +995,7 @@ private:
                 computeClustering(node, &indices[0], indices.size(), branching_);
             }
         }
-        else {            
+        else {
             // find the closest child
             int closest = 0;
             DistanceType dist = distance_(node->childs[closest]->pivot, point, veclen_);
@@ -1005,7 +1007,7 @@ private:
                 }
             }
             addPointToTree(node->childs[closest], index, dist);
-        }                
+        }
     }
 
 
@@ -1022,7 +1024,7 @@ private:
     }
 
 
-private:
+protected:
     /** The branching factor used in the hierarchical k-means clustering */
     int branching_;
 
@@ -1039,7 +1041,7 @@ private:
      * of the cluster.
      */
     float cb_index_;
-    
+
     /**
      * The root node in the tree.
      */

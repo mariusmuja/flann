@@ -95,6 +95,11 @@ struct L2_Simple
     {
         return (a-b)*(a-b);
     }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_L2_SIMPLE;
+    }
 };
 
 template<class T>
@@ -108,14 +113,14 @@ struct L2_3D
     template <typename Iterator1, typename Iterator2>
     ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
-        ResultType result = ResultType();        
+        ResultType result = ResultType();
         ResultType diff;
         diff = *a++ - *b++;
         result += diff*diff;
         diff = *a++ - *b++;
         result += diff*diff;
         diff = *a++ - *b++;
-        result += diff*diff;        
+        result += diff*diff;
         return result;
     }
 
@@ -123,6 +128,11 @@ struct L2_3D
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
         return (a-b)*(a-b);
+    }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_L2;
     }
 };
 
@@ -187,6 +197,11 @@ struct L2
     {
         return (a-b)*(a-b);
     }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_L2;
+    }
 };
 
 
@@ -244,6 +259,11 @@ struct L1
     inline ResultType accum_dist(const U& a, const V& b, int) const
     {
         return std::abs(a-b);
+    }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_L1;
     }
 };
 
@@ -308,6 +328,11 @@ struct MinkowskiDistance
     {
         return pow(static_cast<ResultType>(std::abs(a-b)),order);
     }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_MINKOWSKI;
+    }
 };
 
 
@@ -361,6 +386,10 @@ struct MaxDistance
     /* This distance functor is not dimension-wise additive, which
      * makes it an invalid kd-tree distance, not implementing the accum_dist method */
 
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_MAX;
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -461,6 +490,11 @@ struct HammingLUT
         };
         return table[b];
     }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_HAMMING_LUT;
+    }
 };
 
 /**
@@ -523,6 +557,11 @@ struct HammingPopcnt
 #endif
         return result;
     }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_HAMMING_POPCNT;
+    }
 };
 
 template<typename T>
@@ -572,6 +611,11 @@ struct Hamming
         }
 #endif
         return result;
+    }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_HAMMING;
     }
 };
 
@@ -629,6 +673,11 @@ struct HistIntersectionDistance
     {
         return a<b ? a : b;
     }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_HIST_INTERSECT;
+    }
 };
 
 
@@ -677,6 +726,11 @@ struct HellingerDistance
     {
         ResultType dist = sqrt(static_cast<ResultType>(a)) - sqrt(static_cast<ResultType>(b));
         return dist * dist;
+    }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_HELLINGER;
     }
 };
 
@@ -731,6 +785,11 @@ struct ChiSquareDistance
         }
         return result;
     }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_CHI_SQUARE;
+    }
 };
 
 
@@ -782,6 +841,11 @@ struct KL_Divergence
             }
 		}
         return result;
+    }
+
+    static flann_distance_t type()
+    {
+        return FLANN_DIST_KULLBACK_LEIBLER;
     }
 };
 

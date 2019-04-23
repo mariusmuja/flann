@@ -39,6 +39,7 @@
 #include "flann/util/result_set.h"
 #include "flann/util/dynamic_bitset.h"
 #include "flann/util/saving.h"
+#include "flann/algorithms/nn_opencl_index.h"
 
 namespace flann
 {
@@ -293,7 +294,6 @@ public:
     	ar & removed_count_;
     }
 
-
     /**
      * @brief Perform k-nearest neighbor search
      * @param[in] queries The query points for which to find the nearest neighbors
@@ -338,6 +338,11 @@ public:
     			}
     		}
     	}
+#ifdef FLANN_USE_OPENCL
+        else if (shouldCLKnnSearch(queries.rows, knn, params)) {
+            knnSearchCL(queries, indices, dists, knn, params);
+        }
+#endif /* FLANN_USE_OPENCL */
     	else {
 #pragma omp parallel num_threads(params.cores)
     		{
@@ -430,6 +435,31 @@ public:
 				}
 			}
 		}
+#ifdef FLANN_USE_OPENCL
+        else if (shouldCLKnnSearch(queries.rows, knn, params)) {
+            Matrix<size_t> iMat(queries.rows, knn, 2);
+            Matrix<DistanceType> dMat(queries.rows, knn, 2);
+
+            knnSearchCL(queries, iMat, dMat, knn, params);
+
+            int n = 0;
+            for (int i = 0; i < (int)queries.rows; i++) {
+                // Count the good data returned
+                for (int j = 0; j < knn && dMat[i][j] >= 0; j++)
+                    n = j;
+
+                indices[i].resize(n);
+                dists[i].resize(n);
+
+                // Assume that OpenCL results are sorted and the right format.
+                for (int j = 0; j < knn && dMat[i][j] >= 0; j++)
+                {
+                    indices[i][j] = iMat[i][j];
+                    dists[i][j] = dMat[i][j];
+                }
+            }
+        }
+#endif /* FLANN_USE_OPENCL */
 		else {
 #pragma omp parallel num_threads(params.cores)
 			{
@@ -696,7 +726,52 @@ public:
 
     virtual void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) const = 0;
 
+    /**
+     *
+     */
+#ifdef FLANN_USE_OPENCL
+    virtual void buildCLKnnSearch(size_t knn,
+                                  const SearchParams& params,
+                                  cl_command_queue cq = NULL)
+    {
+        // NO-OP: overridden by OpenCL classes
+    }
+#endif /* FLANN_USE_OPENCL */
+
 protected:
+    /**
+     * Are the conditions right for an OpenCL search to be faster than the
+     * regular scalar search? I imagine this will require experimentation to
+     * appropriately implement.
+     *
+     * @param[in] numQueries Number of queries we're making.
+     * @param[in] knn Number of nearest neighbors to retrieve.
+     * @return Boolean, true if we should do a OpenCL search.
+     */
+    virtual int shouldCLKnnSearch(int numQueries, size_t knn, const SearchParams& params) const
+    {
+        return false;
+    }
+
+    /**
+     * Perform a set of queries using the previously-saved query kernel. The knn
+     * and params arguments must match the arguments used to build the kernel.
+     *
+     * @param[in] queries Matrix of the query points.
+     * @param[out] indices Matrix of returned neighbor indices per query point.
+     * @param[out] dists Matrix of returned neighbor distances per query point.
+     * @param[in] knn Number of nearest neighbors to return per query.
+     * @param[in] params Parameters to use for the search.
+     */
+    virtual void knnSearchCL(const Matrix<ElementType>& queries,
+                             Matrix<size_t>& indices,
+                             Matrix<DistanceType>& dists,
+                             size_t knn,
+                             const SearchParams& params ) const
+    {
+        // unimplemented in nn_index
+        printf("in unimplemented knnSearchCL()!\n");
+    }
 
     virtual void freeIndex() = 0;
 

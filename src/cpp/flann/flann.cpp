@@ -70,6 +70,21 @@ flann::IndexParams create_parameters(FLANNParameters* p)
     }
 #endif
 
+#ifdef FLANN_USE_OPENCL
+    if (p->algorithm == FLANN_INDEX_KMEANS_OPENCL) {
+        params["branching"] = p->branching;
+        params["iterations"] = p->iterations;
+        params["centers_init"] = p->centers_init;
+    }
+
+    if (p->algorithm == FLANN_INDEX_HIERARCHICAL_OPENCL) {
+        params["branching"] = p->branching;
+        params["centers_init"] = p->centers_init;
+        params["trees"] = p->trees;
+        params["leaf_max_size"] = p->leaf_max_size;
+    }
+#endif
+
     if (p->algorithm == FLANN_INDEX_KMEANS) {
         params["branching"] = p->branching;
         params["iterations"] = p->iterations;
