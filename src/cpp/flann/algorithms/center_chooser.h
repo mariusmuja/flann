@@ -13,63 +13,6 @@
 namespace flann
 {
 
-template <typename Distance, typename ElementType>
-struct squareDistance
-{
-    typedef typename Distance::ResultType ResultType;
-    ResultType operator()( ResultType dist ) { return dist*dist; }
-};
-
-
-template <typename ElementType>
-struct squareDistance<L2_Simple<ElementType>, ElementType>
-{
-    typedef typename L2_Simple<ElementType>::ResultType ResultType;
-    ResultType operator()( ResultType dist ) { return dist; }
-};
-
-template <typename ElementType>
-struct squareDistance<L2_3D<ElementType>, ElementType>
-{
-    typedef typename L2_3D<ElementType>::ResultType ResultType;
-    ResultType operator()( ResultType dist ) { return dist; }
-};
-
-template <typename ElementType>
-struct squareDistance<L2<ElementType>, ElementType>
-{
-    typedef typename L2<ElementType>::ResultType ResultType;
-    ResultType operator()( ResultType dist ) { return dist; }
-};
-
-
-template <typename ElementType>
-struct squareDistance<HellingerDistance<ElementType>, ElementType>
-{
-    typedef typename HellingerDistance<ElementType>::ResultType ResultType;
-    ResultType operator()( ResultType dist ) { return dist; }
-};
-
-
-template <typename ElementType>
-struct squareDistance<ChiSquareDistance<ElementType>, ElementType>
-{
-    typedef typename ChiSquareDistance<ElementType>::ResultType ResultType;
-    ResultType operator()( ResultType dist ) { return dist; }
-};
-
-
-template <typename Distance>
-typename Distance::ResultType ensureSquareDistance( typename Distance::ResultType dist )
-{
-    typedef typename Distance::ElementType ElementType;
-
-    squareDistance<Distance, ElementType> dummy;
-    return dummy( dist );
-}
-
-
-
 template <typename Distance>
 class CenterChooser
 {
