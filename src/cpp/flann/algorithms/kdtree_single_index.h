@@ -451,37 +451,20 @@ private:
         // find the largest span from the approximate bounding box
         ElementType max_span = bbox[0].high-bbox[0].low;
         cutfeat = 0;
-        cutval = (bbox[0].high+bbox[0].low)/2;
         for (size_t i=1; i<veclen_; ++i) {
             ElementType span = bbox[i].high-bbox[i].low;
             if (span>max_span) {
                 max_span = span;
                 cutfeat = i;
-                cutval = (bbox[i].high+bbox[i].low)/2;
             }
         }
 
         // compute exact span on the found dimension
-        ElementType min_elem, max_elem;
-        computeMinMax(ind, count, cutfeat, min_elem, max_elem);
+        ElementType min_elem = bbox[cutfeat].low;
+		ElementType max_elem = bbox[cutfeat].high;
         cutval = (min_elem+max_elem)/2;
-        max_span = max_elem - min_elem;
 
         // check if a dimension of a largest span exists
-        size_t k = cutfeat;
-        for (size_t i=0; i<veclen_; ++i) {
-            if (i==k) continue;
-            ElementType span = bbox[i].high-bbox[i].low;
-            if (span>max_span) {
-                computeMinMax(ind, count, i, min_elem, max_elem);
-                span = max_elem - min_elem;
-                if (span>max_span) {
-                    max_span = span;
-                    cutfeat = i;
-                    cutval = (min_elem+max_elem)/2;
-                }
-            }
-        }
         int lim1, lim2;
         planeSplit(ind, count, cutfeat, cutval, lim1, lim2);
 
