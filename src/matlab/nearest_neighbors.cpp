@@ -63,6 +63,7 @@ static void matlabStructToFlannStruct( const mxArray* mexParams, FLANNParameters
 
     // kdtree
     flannParams.trees = (int)*(mxGetPr(mxGetField(mexParams, 0,"trees")));
+    flannParams.leaf_max_size = (int)*(mxGetPr(mxGetField(mexParams, 0,"leaf_max_size")));
 
     // kmeans
     flannParams.branching = (int)*(mxGetPr(mxGetField(mexParams, 0,"branching")));
@@ -106,7 +107,7 @@ static mxArray* flannStructToMatlabStruct( const FLANNParameters& flannParams )
     mxSetField(mexParams, 0, "cores", to_mx_array(flannParams.cores));
 
     mxSetField(mexParams, 0, "trees", to_mx_array(flannParams.trees));
-    mxSetField(mexParams, 0, "leaf_max_size", to_mx_array(flannParams.trees));
+    mxSetField(mexParams, 0, "leaf_max_size", to_mx_array(flannParams.leaf_max_size));
     
     mxSetField(mexParams, 0, "branching", to_mx_array(flannParams.branching));
     mxSetField(mexParams, 0, "iterations", to_mx_array(flannParams.iterations));
@@ -609,6 +610,415 @@ static void _load_index(int nOutArray, mxArray* OutArray[], int nInArray, const 
     pOut[0] = typedIndex;
 }
 
+flann::IndexParams _create_parameters_mex(FLANNParameters* p)
+{
+    flann::IndexParams params;
+
+    params["algorithm"] = p->algorithm;
+
+    params["checks"] = p->checks;
+    params["cb_index"] = p->cb_index;
+    params["eps"] = p->eps;
+
+    if (p->algorithm == FLANN_INDEX_KDTREE) {
+        params["trees"] = p->trees;
+    }
+
+    if (p->algorithm == FLANN_INDEX_KDTREE_SINGLE) {
+        params["trees"] = p->trees;
+        params["leaf_max_size"] = p->leaf_max_size;
+    }
+
+#ifdef FLANN_USE_CUDA
+    if (p->algorithm == FLANN_INDEX_KDTREE_CUDA) {
+        params["leaf_max_size"] = p->leaf_max_size;
+    }
+#endif
+
+    if (p->algorithm == FLANN_INDEX_KMEANS) {
+        params["branching"] = p->branching;
+        params["iterations"] = p->iterations;
+        params["centers_init"] = p->centers_init;
+    }
+
+    if (p->algorithm == FLANN_INDEX_AUTOTUNED) {
+        params["target_precision"] = p->target_precision;
+        params["build_weight"] = p->build_weight;
+        params["memory_weight"] = p->memory_weight;
+        params["sample_fraction"] = p->sample_fraction;
+    }
+
+    if (p->algorithm == FLANN_INDEX_HIERARCHICAL) {
+        params["branching"] = p->branching;
+        params["centers_init"] = p->centers_init;
+        params["trees"] = p->trees;
+        params["leaf_max_size"] = p->leaf_max_size;
+    }
+
+    if (p->algorithm == FLANN_INDEX_LSH) {
+        params["table_number"] = p->table_number_;
+        params["key_size"] = p->key_size_;
+        params["multi_probe_level"] = p->multi_probe_level_;
+    }
+
+    params["log_level"] = p->log_level;
+    params["random_seed"] = p->random_seed;
+
+    return params;
+}
+
+flann::SearchParams _create_search_params_mex(FLANNParameters* p)
+{
+    flann::SearchParams params;
+    params.checks = p->checks;
+    params.eps = p->eps;
+    params.sorted = p->sorted;
+    params.max_neighbors = p->max_neighbors;
+    params.cores = p->cores;
+
+    return params;
+}
+
+template<typename Distance>
+int __flann_radius_search_mex(typename Distance::ElementType* dataset,  int rows, int cols, 
+                          typename Distance::ElementType* testset, int tcount,
+                          std::vector<std::vector<int> >& indices,
+                          std::vector<std::vector<typename Distance::ResultType> >& dists,
+                          float radius,
+                          FLANNParameters* flann_params, Distance d = Distance())
+{
+    typedef typename Distance::ElementType ElementType;
+    typedef typename Distance::ResultType DistanceType;
+
+    try {
+        if (flann_params->random_seed>0) {
+            seed_random(flann_params->random_seed);
+        }
+
+        flann::IndexParams params = _create_parameters_mex(flann_params);
+        flann::Index<Distance>* index = new flann::Index<Distance>(Matrix<ElementType>(dataset,rows,cols), params, d);
+        index->buildIndex();
+
+        flann::SearchParams search_params = _create_search_params_mex(flann_params);
+        int count = index->radiusSearch(flann::Matrix<ElementType>(testset, tcount, index->veclen()),
+                                        indices,
+                                        dists, radius, search_params );
+
+        delete index;
+        return count;
+    }
+    catch (std::runtime_error& e) {
+        std::string estr(e.what());
+        estr = "Caught exception: " + estr;
+        mexErrMsgTxt(estr.c_str());
+        return -1;
+    }
+}
+
+template<typename Distance>
+int __flann_radius_search_index_mex(flann_index_t index_ptr,
+                          typename Distance::ElementType* testset, int tcount,
+                          std::vector<std::vector<int> >& indices,
+                          std::vector<std::vector<typename Distance::ResultType> >& dists,
+                          float radius,
+                          FLANNParameters* flann_params)
+{
+    typedef typename Distance::ElementType ElementType;
+    typedef typename Distance::ResultType DistanceType;
+
+    try {
+        if (index_ptr==NULL) {
+            mexErrMsgTxt("Invalid index");
+            return -1;
+        }
+        if (flann_params->random_seed>0) {
+            seed_random(flann_params->random_seed);
+        }
+        flann::Index<Distance>* index = (flann::Index<Distance>*)index_ptr;
+
+        flann::SearchParams search_params = _create_search_params_mex(flann_params);
+        int count = index->radiusSearch(flann::Matrix<ElementType>(testset, tcount, index->veclen()),
+                                        indices,
+                                        dists, radius, search_params );
+
+
+        return count;
+    }
+    catch (std::runtime_error& e) {
+        std::string estr(e.what());
+        estr = "Caught exception: " + estr;
+        mexErrMsgTxt(estr.c_str());
+        return -1;
+    }
+}
+
+extern flann_distance_t flann_distance_type;
+extern int flann_distance_order;
+
+template<typename T, typename R>
+int _flann_radius_search_mex(T* dataset, int rows, int cols, 
+                         T* testset,
+                         int tcount,
+                         std::vector<std::vector<int> >& indices,
+                         std::vector<std::vector<R> >& dists,
+                         float radius,
+                         FLANNParameters* flann_params)
+{
+    if (flann_distance_type==FLANN_DIST_EUCLIDEAN) {
+        return __flann_radius_search_mex<L2<T> >(dataset, rows, cols, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_MANHATTAN) {
+        return __flann_radius_search_mex<L1<T> >(dataset, rows, cols, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_MINKOWSKI) {
+        return __flann_radius_search_mex<MinkowskiDistance<T> >(dataset, rows, cols, testset, tcount, indices, dists, radius, flann_params, MinkowskiDistance<T>(flann_distance_order));
+    }
+    else if (flann_distance_type==FLANN_DIST_HIST_INTERSECT) {
+        return __flann_radius_search_mex<HistIntersectionDistance<T> >(dataset, rows, cols, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_HELLINGER) {
+        return __flann_radius_search_mex<HellingerDistance<T> >(dataset, rows, cols, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_CHI_SQUARE) {
+        return __flann_radius_search_mex<ChiSquareDistance<T> >(dataset, rows, cols, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
+        return __flann_radius_search_mex<KL_Divergence<T> >(dataset, rows, cols, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else {
+        mexErrMsgTxt( "Distance type unsupported in the C bindings, use the C++ bindings instead");
+        return -1;
+    }
+}
+
+template<typename T, typename R>
+int _flann_radius_search_index_mex(flann_index_t index_ptr,
+                         T* testset,
+                         int tcount,
+                         std::vector<std::vector<int> >& indices,
+                         std::vector<std::vector<R> >& dists,
+                         float radius,
+                         FLANNParameters* flann_params)
+{
+    if (flann_distance_type==FLANN_DIST_EUCLIDEAN) {
+        return __flann_radius_search_index_mex<L2<T> >(index_ptr, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_MANHATTAN) {
+        return __flann_radius_search_index_mex<L1<T> >(index_ptr, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_MINKOWSKI) {
+        return __flann_radius_search_index_mex<MinkowskiDistance<T> >(index_ptr, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_HIST_INTERSECT) {
+        return __flann_radius_search_index_mex<HistIntersectionDistance<T> >(index_ptr, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_HELLINGER) {
+        return __flann_radius_search_index_mex<HellingerDistance<T> >(index_ptr, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_CHI_SQUARE) {
+        return __flann_radius_search_index_mex<ChiSquareDistance<T> >(index_ptr, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
+        return __flann_radius_search_index_mex<KL_Divergence<T> >(index_ptr, testset, tcount, indices, dists, radius, flann_params);
+    }
+    else {
+        mexErrMsgTxt( "Distance type unsupported in the C bindings, use the C++ bindings instead");
+        return -1;
+    }
+}
+
+/**
+ * Input arguments: dataset (matrix), testset (matrix), radius (double),  params (struct)
+ * Output arguments: indices(matrix), dists(matrix)
+ */
+static void _find_rn(int nOutArray, mxArray* OutArray[], int nInArray, const mxArray* InArray[])
+{
+    /* Check the number of input arguments */
+    if(nInArray != 4) {
+        mexErrMsgTxt("Incorrect number of input arguments, expecting:\n"
+                     "dataset, testset, nearest_neighbors, params");
+    }
+
+    /* Check the number of output arguments */
+    if(nOutArray > 2) {
+        mexErrMsgTxt("One or two outputs required.");
+    }
+    const mxArray* datasetMat = InArray[0];
+    const mxArray* testsetMat = InArray[1];
+    check_allowed_type(datasetMat);
+    check_allowed_type(testsetMat);
+
+    int dcount = mxGetN(datasetMat);
+    int length = mxGetM(datasetMat);
+    int tcount = mxGetN(testsetMat);
+
+    if (mxGetM(testsetMat) != length) {
+        mexErrMsgTxt("Dataset and testset features should have the same size.");
+    }
+
+    const mxArray* rMat = InArray[2];
+
+    if ((mxGetM(rMat)!=1)||(mxGetN(rMat)!=1)|| !mxIsNumeric(rMat)) {
+        mexErrMsgTxt("Radius should be a scalar.");
+    }
+    double radius = (double)(*mxGetPr(rMat));
+
+    const mxArray* pStruct = InArray[3];
+
+    if (!mxIsStruct(pStruct)) {
+        mexErrMsgTxt("Params must be a struct object.");
+    }
+
+    FLANNParameters p;
+    matlabStructToFlannStruct(pStruct, p);
+
+    std::vector<std::vector<int> > result;
+    std::vector<std::vector<float> > dists;
+    std::vector<std::vector<double> > ddists;
+
+    /* do the search */
+    if (mxIsSingle(datasetMat)) {
+        float* dataset = (float*) mxGetData(datasetMat);
+        float* testset = (float*) mxGetData(testsetMat);
+        _flann_radius_search_mex(dataset,dcount,length,testset, tcount, result, dists, radius, &p);
+    }
+    else if (mxIsDouble(datasetMat)) {
+        double* dataset = (double*) mxGetData(datasetMat);
+        double* testset = (double*) mxGetData(testsetMat);
+        _flann_radius_search_mex(dataset,dcount,length,testset, tcount, result, ddists, radius, &p);
+    }
+    else if (mxIsUint8(datasetMat)) {
+        unsigned char* dataset = (unsigned char*) mxGetData(datasetMat);
+        unsigned char* testset = (unsigned char*) mxGetData(testsetMat);
+        _flann_radius_search_mex(dataset,dcount,length,testset, tcount, result, dists, radius, &p);
+    }
+    else if (mxIsInt32(datasetMat)) {
+        int* dataset = (int*) mxGetData(datasetMat);
+        int* testset = (int*) mxGetData(testsetMat);
+        _flann_radius_search_mex(dataset,dcount,length,testset, tcount, result, dists, radius, &p);
+    }
+
+    OutArray[0] = mxCreateCellMatrix(1, tcount);
+    if (nOutArray > 1) {
+        OutArray[1] = mxCreateCellMatrix(1, tcount);
+    }
+    for (size_t i=0; i<result.size(); ++i) {
+        mxArray* idxs = mxCreateDoubleMatrix(result[i].size(), 1, mxREAL);
+        double *pOut = mxGetPr(idxs);
+        for (size_t j=0; j<result[i].size(); ++j)
+            pOut[j] = result[i][j] + 1; // matlab uses 1-based indexing
+        mxSetCell(OutArray[0], i, idxs);
+
+        if (nOutArray > 1) {
+            mxArray* mdists = mxCreateDoubleMatrix(result[i].size(), 1, mxREAL);
+            double* pDists = mxGetPr(mdists);
+            for (size_t j=0; j<result[i].size(); ++j) {
+                if (!dists.empty()) {
+                    pDists[j] = dists[i][j];
+                }
+                if (!ddists.empty()) {
+                    pDists[j] = ddists[i][j];
+                }
+            }
+            mxSetCell(OutArray[1], i, mdists);
+        }
+    }
+}
+
+/**
+ * Input arguments: index (pointer), testset (matrix), radius (double),  params (struct)
+ * Output arguments: indices(matrix), dists(matrix)
+ */
+static void _index_find_rn(int nOutArray, mxArray* OutArray[], int nInArray, const mxArray* InArray[])
+{
+    /* Check the number of input arguments */
+    if(nInArray != 4) {
+        mexErrMsgTxt("Incorrect number of input arguments");
+    }
+    /* Check if there is one Output matrix */
+    if(nOutArray > 2) {
+        mexErrMsgTxt("One or two outputs required.");
+    }
+
+    const mxArray* indexMat = InArray[0];
+    TypedIndex* typedIndex = *(TypedIndex**)mxGetData(indexMat);
+
+    const mxArray* testsetMat = InArray[1];
+    check_allowed_type(testsetMat);
+
+    int tcount = mxGetN(testsetMat);
+
+    const mxArray* rMat = InArray[2];
+
+    if ((mxGetM(rMat)!=1)||(mxGetN(rMat)!=1)) {
+        mexErrMsgTxt("Radius should be a scalar.");
+    }
+    double radius = (double)(*mxGetPr(rMat));
+
+    const mxArray* pStruct = InArray[3];
+
+    FLANNParameters p;
+    matlabStructToFlannStruct(pStruct, p);
+
+    std::vector<std::vector<int> > result;
+    std::vector<std::vector<float> > dists;
+    std::vector<std::vector<double> > ddists;
+
+    if (mxIsSingle(testsetMat)) {
+        if (typedIndex->type != FLANN_FLOAT32) {
+            mexErrMsgTxt("Index type must match testset type");
+        }
+        float* testset = (float*) mxGetData(testsetMat);
+        _flann_radius_search_index_mex(typedIndex->index, testset, tcount, result, dists, radius, &p);
+    }
+    else if (mxIsDouble(testsetMat)) {
+        if (typedIndex->type != FLANN_FLOAT64) {
+            mexErrMsgTxt("Index type must match testset type");
+        }
+        double* testset = (double*) mxGetData(testsetMat);
+        _flann_radius_search_index_mex(typedIndex->index, testset, tcount, result, ddists, radius, &p);
+    }
+    else if (mxIsUint8(testsetMat)) {
+        if (typedIndex->type != FLANN_UINT8) {
+            mexErrMsgTxt("Index type must match testset type");
+        }
+        unsigned char* testset = (unsigned char*) mxGetData(testsetMat);
+        _flann_radius_search_index_mex(typedIndex->index, testset, tcount, result, dists, radius, &p);
+    }
+    else if (mxIsInt32(testsetMat)) {
+        if (typedIndex->type != FLANN_INT32) {
+            mexErrMsgTxt("Index type must match testset type");
+        }
+        int* testset = (int*) mxGetData(testsetMat);
+        _flann_radius_search_index_mex(typedIndex->index, testset, tcount, result, dists, radius, &p);
+    }
+
+    OutArray[0] = mxCreateCellMatrix(1, tcount);
+    if (nOutArray > 1) {
+        OutArray[1] = mxCreateCellMatrix(1, tcount);
+    }
+    for (size_t i=0; i<result.size(); ++i) {
+        mxArray* idxs = mxCreateDoubleMatrix(result[i].size(), 1, mxREAL);
+        double *pOut = mxGetPr(idxs);
+        for (size_t j=0; j<result[i].size(); ++j)
+            pOut[j] = result[i][j] + 1; // matlab uses 1-based indexing
+        mxSetCell(OutArray[0], i, idxs);
+
+        if (nOutArray > 1) {
+            mxArray* mdists = mxCreateDoubleMatrix(result[i].size(), 1, mxREAL);
+            double* pDists = mxGetPr(mdists);
+            for (size_t j=0; j<result[i].size(); ++j) {
+                if (!dists.empty()) {
+                    pDists[j] = dists[i][j];
+                }
+                if (!ddists.empty()) {
+                    pDists[j] = ddists[i][j];
+                }
+            }
+            mxSetCell(OutArray[1], i, mdists);
+        }
+    }
+}
 
 struct mexFunctionEntry
 {
@@ -625,6 +1035,8 @@ static mexFunctionEntry __functionTable[] = {
     { "load_index", &_load_index},
     { "set_log_level", &_set_log_level},
     { "set_distance_type", &_set_distance_type},
+    { "find_rn", &_find_rn},
+    { "index_find_rn", &_index_find_rn}
 };
 
 
