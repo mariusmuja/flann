@@ -137,6 +137,22 @@ public:
 
         uploadTreeToGpu();
     }
+	
+	/**
+	 * Builds the index using the specified dataset
+	 * @param dataset the dataset to use
+	 */
+    virtual void buildIndex(const Matrix<ElementType>& dataset)
+    {
+        dataset_ = dataset;
+        size_ = dataset_.rows;
+        dim_ = dataset_.cols;
+
+        int dim_param = get_param(index_params_,"dim",-1);
+        if (dim_param>0) dim_ = dim_param;
+		
+        this->buildIndex();
+    }
 
     flann_algorithm_t getType() const
     {
@@ -299,7 +315,7 @@ private:
 
     GpuHelper* gpu_helper_;
 
-    const Matrix<ElementType> dataset_;
+    Matrix<ElementType> dataset_;
 
     int leaf_max_size_;
 
