@@ -50,7 +50,8 @@
 #include "flann/util/saving.h"
 #include "flann/util/logger.h"
 
-
+//Added for the quick heap patch
+#include <omp.h>
 
 namespace flann
 {
@@ -118,6 +119,7 @@ public:
 
         initCenterChooser();
         setDataset(inputData);
+        prepSearchHeap();
     }
 
 
@@ -140,6 +142,7 @@ public:
         cb_index_  = get_param(params,"cb_index",0.4f);
 
         initCenterChooser();
+        prepSearchHeap();
     }
 
 
@@ -153,6 +156,7 @@ public:
     	initCenterChooser();
 
     	copyTree(root_, other.root_);
+    	prepSearchHeap();
     }
 
     KMeansIndex& operator=(KMeansIndex other)
@@ -187,6 +191,12 @@ public:
     virtual ~KMeansIndex()
     {
     	delete chooseCenters_;
+    	for( size_t i = 0; i < heaps->size(); ++i ) {
+    	    if ( (*heaps)[i] ) {
+    	        delete (*heaps)[i];
+    	    }
+    	}
+    	heaps->clear();
     	freeIndex();
     }
 
@@ -724,7 +734,11 @@ private:
         }
         else {
             // Priority queue storing intermediate branches in the best-bin-first search
-            Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
+            int ind = omp_get_thread_num();
+            if ( !(*heaps)[ind] ) { //Only allocate a new heap if one doesn't exist
+            	(*heaps)[ind] = new Heap<BranchSt>((int)size_);
+            }
+            Heap<BranchSt>* heap = (*heaps)[ind];
 
             int checks = 0;
             findNN<with_removed>(root_, result, vec, checks, maxChecks, heap);
@@ -735,7 +749,7 @@ private:
                 findNN<with_removed>(node, result, vec, checks, maxChecks, heap);
             }
 
-            delete heap;
+            heap->clear();
         }
 
     }
@@ -1021,8 +1035,19 @@ private:
     	std::swap(chooseCenters_, other.chooseCenters_);
     }
 
+    void prepSearchHeap()
+    {
+    	heaps = new std::vector<Heap<BranchSt>*>(omp_get_max_threads());
+    }
 
 private:
+    /** 
+     * A fixed collection of heaps to be used by a call to kNNSearch, instead of repeated allocation and deletion 
+     * This modification supports FLANN's built-in search only (from a single call to kNNSearch) but not externally 
+     * parallel calls to findNeighbors
+    **/
+    std::vector<Heap<BranchSt>*>* heaps;
+
     /** The branching factor used in the hierarchical k-means clustering */
     int branching_;
 
