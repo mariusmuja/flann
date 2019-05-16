@@ -79,7 +79,15 @@ find_hdf5()
 if (NOT HDF5_FOUND)
 	message(WARNING "hdf5 library not found, some tests will not be run")
 else()
-    include_directories(${HDF5_INCLUDE_DIR})
+    # More recent FindHDF5.cmake scripts give output as HDF5_INCLUDE_DIRS and
+    # call HDF5_INCLUDE_DIR deprecated.  But we must check both because early
+    # CMake 2.8 versions provide a FindHDF5.cmake that only give
+    # HDF5_INCLUDE_DIR.
+    if ("${HDF5_INCLUDE_DIR}" STREQUAL "")
+      include_directories(${HDF5_INCLUDE_DIRS})
+    else ()
+      include_directories(${HDF5_INCLUDE_DIR})
+    endif ()
 endif()
 
 if (USE_MPI OR HDF5_IS_PARALLEL)
