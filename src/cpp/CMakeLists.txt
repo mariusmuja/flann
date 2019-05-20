@@ -2,7 +2,11 @@
 
 add_definitions(-D_FLANN_VERSION=${FLANN_VERSION})
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flann/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/flann/config.h)
+# Enforce NEWLINE_STYLE to UNIX to prevent Git from finding the file dirty.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flann/config.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/flann/config.h
+    NEWLINE_STYLE UNIX
+)
 
 file(GLOB_RECURSE C_SOURCES flann.cpp)
 file(GLOB_RECURSE CPP_SOURCES flann_cpp.cpp)

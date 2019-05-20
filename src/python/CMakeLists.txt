@@ -1,4 +1,5 @@
-configure_file( setup.py.tpl setup.py )
+# Enforce NEWLINE_STYLE to UNIX to prevent Git from finding the file dirty.
+configure_file( setup.py.tpl setup.py NEWLINE_STYLE UNIX )
 
 install( DIRECTORY pyflann DESTINATION share/flann/python )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/setup.py DESTINATION share/flann/python )

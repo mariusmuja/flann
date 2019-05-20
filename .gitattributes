@@ -1,2 +1,5 @@
 .gitignore      export-ignore
 .gitattributes      export-ignore
+
+src/cpp/flann/config.h eol=lf
+src/python/setup.py eol=lf
