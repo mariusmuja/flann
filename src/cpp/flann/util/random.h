@@ -106,8 +106,7 @@ public:
         size_ = n;
         for (int i = 0; i < size_; ++i) vals_[i] = i;
 
-        std::random_device rd;
-        std::mt19937 g(rd());
+        static std::mt19937 g((std::random_device())());
         std::shuffle(vals_.begin(), vals_.end(), g);
 
         counter_ = 0;
