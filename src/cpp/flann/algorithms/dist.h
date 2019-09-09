@@ -247,7 +247,76 @@ struct L1
     }
 };
 
+/*
+    Angular similarity based on cosine distance.
+    It returns distance in radians 
+    Serial implementation
+*/
+template<class T>
+struct CS
+{
 
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType sum_A, sum_B, product;
+        Iterator1 last = a + size;
+
+        while (a < last) {
+            product = product + (*a) * (*b);
+            sum_A = sum_A + (*a) * (*a);
+            sum_B = sum_B + (*b) * (*b);
+
+            a += 1;
+            b += 1;
+        }
+        sum_A = sqrt(sum_A);
+        sum_B = sqrt(sum_B);       
+        result = product/(sum_A*sum_B);
+        return acos(result);
+    }
+};
+
+/*
+    Angular similarity based on improved sqrt-cosine distance.
+    It returns distance in radians
+    Serial implementation.
+    Original article - Sohangir S, Wang D (2017) Improved sqrt-cosine similarity measurement, Journal of Big Data. doi: https://doi.org/10.1186/s40537-017-0083-6
+
+*/
+template<class T>
+struct ISC
+{
+    typedef T ElementType;
+    typedef typename Accumulator<T>::Type ResultType;
+
+    template <typename Iterator1, typename Iterator2>
+    ResultType operator()(Iterator1 a, Iterator2 b, size_t size, ResultType worst_dist = -1) const
+    {
+        ResultType result = ResultType();
+        ResultType sum_A, sum_B, product;
+        Iterator1 last = a + size;
+
+        while (a < last) {
+            product = product + sqrt((*a) * (*b));
+            sum_A = sum_A + (*a);
+            sum_B = sum_B + (*b);
+
+            a += 1;
+            b += 1;
+        }
+        // product = sqrt(product);
+        sum_A = sqrt(sum_A);
+        sum_B = sqrt(sum_B);       
+        result = product/(sum_A*sum_B);
+        return acos(result);
+    }
+};
+	
 
 template<class T>
 struct MinkowskiDistance
