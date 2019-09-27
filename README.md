@@ -20,6 +20,16 @@ More information and experimental results can be found in the following paper:
 Getting FLANN
 -------------
 
+You can download and install FLANN using the [vcpkg](https://github.com/Microsoft/vcpkg) dependency manager:
+
+    git clone https://github.com/Microsoft/vcpkg.git
+    cd vcpkg
+    ./bootstrap-vcpkg.sh
+    ./vcpkg integrate install
+    vcpkg install flann
+
+The FLANN port in vcpkg is kept up to date by Microsoft team members and community contributors. If the version is out of date, please [create an issue or pull request](https://github.com/Microsoft/vcpkg) on the vcpkg repository.
+
 If you want to try out the latest changes or contribute to FLANN, then it's recommended that you checkout the git source repository: `git clone git://github.com/mariusmuja/flann.git`
 
 If you just want to browse the repository, you can do so by going [here](https://github.com/mariusmuja/flann).
