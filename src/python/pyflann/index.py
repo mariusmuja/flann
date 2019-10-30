@@ -110,7 +110,7 @@ class FLANN(object):
             raise FLANNException('Cannot handle type: %s' % pts.dtype)
 
         if qpts.dtype.type not in allowed_types:
-            raise FLANNException('Cannot handle type: %s' % pts.dtype)
+            raise FLANNException('Cannot handle type: %s' % qpts.dtype)
 
         if pts.dtype != qpts.dtype:
             raise FLANNException('Data and query must have the same type')
