@@ -1,6 +1,10 @@
 #!/usr/bin/env python2
 
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    print('setuptools is not installed. Falling back to distutils.core')
+    from distutils.core import setup
 from os.path import exists, abspath, dirname, join
 import os
 import sys
