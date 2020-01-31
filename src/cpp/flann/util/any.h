@@ -233,7 +233,7 @@ public:
 
     /// Cast operator. You can only cast to the original type.
     template<typename T>
-    T& cast()
+    T cast()
     {
         if (policy->type() != typeid(T)) throw anyimpl::bad_any_cast();
         T* r = reinterpret_cast<T*>(policy->get_value(&object));
@@ -242,7 +242,7 @@ public:
 
     /// Cast operator. You can only cast to the original type.
     template<typename T>
-    const T& cast() const
+    const T cast() const
     {
         if (policy->type() != typeid(T)) throw anyimpl::bad_any_cast();
         const T* r = reinterpret_cast<const T*>(policy->get_value(&object));
