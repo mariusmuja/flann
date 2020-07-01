@@ -376,6 +376,7 @@ private:
         }
         IndexHeader header = load_header(fin);
         if (header.h.data_type != flann_datatype_value<ElementType>::value) {
+            fclose(fin);
             throw FLANNException("Datatype of saved index is different than of the one to be loaded.");
         }
 

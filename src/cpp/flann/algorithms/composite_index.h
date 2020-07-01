@@ -45,7 +45,7 @@ namespace flann
 struct CompositeIndexParams : public IndexParams
 {
     CompositeIndexParams(int trees = 4, int branching = 32, int iterations = 11,
-                         flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2 )
+                         flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2f )
     {
         (*this)["algorithm"] = FLANN_INDEX_KMEANS;
         // number of randomized trees to use (for kdtree)
@@ -166,7 +166,7 @@ public:
         kdtree_index_->buildIndex();
     }
     
-    void addPoints(const Matrix<ElementType>& points, float rebuild_threshold = 2)
+    void addPoints(const Matrix<ElementType>& points, float rebuild_threshold = 2.f)
     {
         kmeans_index_->addPoints(points, rebuild_threshold);
         kdtree_index_->addPoints(points, rebuild_threshold);

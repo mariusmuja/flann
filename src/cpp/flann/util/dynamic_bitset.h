@@ -52,13 +52,13 @@ namespace flann {
 class DynamicBitset
 {
 public:
-    /** @param default constructor
+    /** default constructor
      */
     DynamicBitset() : size_(0)
     {
     }
 
-    /** @param only constructor we use in our code
+    /** only constructor we use in our code
      * @param the size of the bitset (in bits)
      */
     DynamicBitset(size_t size)
@@ -82,7 +82,7 @@ public:
         return bitset_.empty();
     }
 
-    /** @param set all the bits to 0
+    /** set all the bits to 0
      */
     void reset()
     {
@@ -90,7 +90,7 @@ public:
     }
 
     /** @brief set one bit to 0
-     * @param
+     * @param index
      */
     void reset(size_t index)
     {
@@ -101,7 +101,7 @@ public:
      * This function is useful when resetting a given set of bits so that the
      * whole bitset ends up being 0: if that's the case, we don't care about setting
      * other bits to 0
-     * @param
+     * @param index
      */
     void reset_block(size_t index)
     {
@@ -117,7 +117,7 @@ public:
         bitset_.resize(size / cell_bit_size_ + 1);
     }
 
-    /** @param set a bit to true
+    /** set a bit to true
      * @param index the index of the bit to set to 1
      */
     void set(size_t index)
@@ -125,14 +125,14 @@ public:
         bitset_[index / cell_bit_size_] |= size_t(1) << (index % cell_bit_size_);
     }
 
-    /** @param gives the number of contained bits
+    /** gives the number of contained bits
      */
     size_t size() const
     {
         return size_;
     }
 
-    /** @param check if a bit is set
+    /** check if a bit is set
      * @param index the index of the bit to check
      * @return true if the bit is set
      */

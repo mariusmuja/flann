@@ -58,7 +58,7 @@ namespace flann
 struct KMeansIndexParams : public IndexParams
 {
     KMeansIndexParams(int branching = 32, int iterations = 11,
-                      flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2 )
+                      flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM, float cb_index = 0.2f )
     {
         (*this)["algorithm"] = FLANN_INDEX_KMEANS;
         // branching factor
@@ -212,7 +212,7 @@ public:
 
     using BaseClass::buildIndex;
 
-    void addPoints(const Matrix<ElementType>& points, float rebuild_threshold = 2)
+    void addPoints(const Matrix<ElementType>& points, float rebuild_threshold = 2.f)
     {
         assert(points.cols==veclen_);
         size_t old_size = size_;
