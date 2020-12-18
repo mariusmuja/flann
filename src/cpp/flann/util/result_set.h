@@ -252,7 +252,7 @@ public:
 #endif
             {
                 // Check for duplicate indices
-                for (size_t j = i - 1; dist_index_[j].dist_ == dist && j--;) {
+                for (size_t j = i; j-- && dist_index_[j].dist_ == dist;) {
                     if (dist_index_[j].index_ == index) {
                         return;
                     }
