@@ -492,10 +492,14 @@ public:
     	if (sorted) {
     		// std::sort_heap(dist_index_.begin(), dist_index_.end());
     		// sort seems faster here, even though dist_index_ is a heap
-    		std::sort(dist_index_.begin(), dist_index_.end());
-    	}
+   		if (num_elements<dist_index_.size()) {
+    			std::partial_sort(dist_index_.begin(), dist_index_.begin()+num_elements, dist_index_.end());
+    		} else {
+    			std::sort(dist_index_.begin(), dist_index_.end());
+		}
+	}
     	else {
-    		if (num_elements<size()) {
+    		if (num_elements<dist_index_.size()) {
     			std::nth_element(dist_index_.begin(), dist_index_.begin()+num_elements, dist_index_.end());
     		}
     	}
